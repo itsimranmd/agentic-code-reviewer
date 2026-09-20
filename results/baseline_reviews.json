@@ -1,0 +1,351 @@
+{
+  "repo": "psf/requests",
+  "model": "gpt-4o-mini",
+  "approach": "naive single-pass, generic prompt",
+  "reviews": [
+    {
+      "sha": "6f66281a",
+      "message": "Add hasattr checks for remaining protocol isinstance checks (#7505)",
+      "lines": 31,
+      "review": "Here are some observations and potential issues in the provided code changes:\n\n1. **Type Hinting and Protocol Usage**:\n   - The `has_read` function is using `TypeIs[SupportsRead[str | bytes]]`, which may not be defined or imported correctly. Ensure that `TypeIs` is a valid type hint in your context. If it is not defined, this will lead to a runtime error.\n\n2. **Error Handling**:\n   - The `has_read` function does not handle cases where `obj` might be `None`. If `None` is passed to `has_read`, it will raise an `AttributeError` when trying to access `hasattr(obj, \"read\")`. Consider adding a check for `None` at the beginning of the function to return `False` or handle it appropriately.\n\n3. **Testing**:\n   - The new test `test_post_getattr_proxy_read_only` is a good addition, but it only tests one specific case of a proxy object. It would be beneficial to add more tests to cover other edge cases, such as:\n     - What happens if the object does not have a `read` method but has other attributes?\n     - Testing with objects that have a `read` method but are not of type `SupportsRead`.\n     - Testing with various types of objects (e.g., `None`, integers, lists) to ensure robustness.\n\n4. **Code Duplication**:\n   - The checks for `isinstance(data, _SupportsRead)` and `hasattr(data, \"read\")` are replaced with `_t.has_read(data)`, which is good for reducing duplication. However, ensure that this change does not introduce any unintended side effects. It would be prudent to review the behavior of `has_read` in all contexts where it is used.\n\n5. **Imports**:\n   - The import statement `from . import _types as _t` is added in `models.py`, but the previous import of `_types` is commented out. Ensure that this does not lead to any confusion or issues with circular imports or unused imports.\n\n6. **Deprecation Warnings**:\n   - If `basestring` is being used in the code, be aware that it is not available in Python 3. If this code is intended to run in Python 3, consider replacing `basestring` with `str`.\n\n7. **Documentation**:\n   - The docstring for `has_read` is clear, but consider adding more context about what types of objects are expected and how the function should be used. This will help future maintainers understand the intent behind the function.\n\n8. **Performance Considerations**:\n   - The use of `hasattr` can have performance implications, especially if used in a tight loop or frequently called function. If performance is a concern, consider profiling the code to ensure that the checks do not introduce significant overhead.\n\nOverall, the changes seem to be on the right track, but addressing the above points will help improve the robustness, maintainability, and clarity of the code."
+    },
+    {
+      "sha": "6f205ff4",
+      "message": "Fix `_encode_files` detection for `__getattr__`-based file wrappers (#",
+      "lines": 15,
+      "review": "Here are some issues and suggestions for improvement based on the provided code changes:\n\n1. **Code Clarity and Comments**:\n   - The comments added in the `_encode_files` function (lines 237-239) are helpful, but they could be more descriptive. For example, explaining why `hasattr(fp, \"read\")` is necessary would improve clarity for future maintainers.\n\n2. **Type Checking**:\n   - The check for `hasattr(fp, \"read\")` (line 238) is a good addition to handle file-like objects that do not explicitly implement `_SupportsRead`. However, it may be beneficial to ensure that the object also has a `read` method that behaves as expected (i.e., it should return bytes or string data). Consider adding a more robust check or a try-except block to handle potential exceptions when calling `fp.read()`.\n\n3. **Error Handling**:\n   - There is no error handling for the `fp.read()` call. If `fp` is a file-like object but raises an exception during reading (e.g., due to I/O errors), this could lead to unhandled exceptions. It would be prudent to wrap the read operation in a try-except block to handle potential errors gracefully.\n\n4. **Testing**:\n   - The new test `test_post_named_tempfile` (lines 1088-1097) is a good addition, but it only tests one specific case. Consider adding more tests to cover various scenarios, such as:\n     - Passing in different types of file-like objects (e.g., `io.StringIO`, `io.BytesIO`).\n     - Testing with invalid file-like objects that do not have a `read` method.\n     - Testing with empty files or files with different encodings to ensure robustness.\n\n5. **Resource Management**:\n   - The use of `tempfile.NamedTemporaryFile` is good, but ensure that the file is properly closed after use. The context manager (`with` statement) handles this, but it's worth noting that if any exceptions occur before the file is closed, it will still be cleaned up. However, if you were to use a different method of file handling, you would need to ensure proper cleanup.\n\n6. **Documentation**:\n   - If this function is part of a public API, consider updating the documentation to reflect the changes made, especially regarding the types of objects that can be passed to `_encode_files`.\n\n7. **Performance Considerations**:\n   - If `_encode_files` is called frequently with large files, consider the performance implications of using `hasattr` and the potential overhead of checking for the `read` method. While this is generally acceptable, it\u2019s worth profiling if performance becomes an issue.\n\nBy addressing these points, the code will be more robust, maintainable, and easier to understand for future developers."
+    },
+    {
+      "sha": "1190afd1",
+      "message": "Add type annotation for `Request.hooks` (#7498)",
+      "lines": 1,
+      "review": "Here are some points to consider regarding the code change in the pull request:\n\n1. **Type Annotation Clarity**: \n   - The type annotation for `hooks` is defined as `dict[str, list[_t.HookType]]`. While this is a valid type annotation, it would be beneficial to ensure that `_t.HookType` is clearly defined and documented elsewhere in the codebase. If `_t.HookType` is not well-documented, it may lead to confusion for future developers regarding what types of hooks are expected.\n\n2. **Missing Error Handling**:\n   - The code snippet does not show any error handling related to the `hooks` attribute. If the `hooks` dictionary is expected to contain certain keys or types of hooks, there should be validation logic to ensure that the data conforms to the expected structure. This could prevent runtime errors when hooks are accessed or executed.\n\n3. **Testing**:\n   - There is no indication in the provided snippet that tests have been added or updated to cover the new type annotation for `hooks`. It is important to ensure that there are unit tests that validate the behavior of the `Request` class, especially regarding how hooks are utilized. If tests are missing, this should be flagged for the author to address.\n\n4. **Documentation**:\n   - The docstring for the `Request` class does not mention the `hooks` attribute. It would be helpful to update the docstring to include a description of the `hooks` attribute, its purpose, and how it should be used. This will improve code readability and maintainability.\n\n5. **Backward Compatibility**:\n   - If this change is part of a larger refactor or if the `Request` class is part of a public API, consider whether this change could break backward compatibility. If existing code relies on the previous structure of `hooks`, it may lead to issues for users of the library.\n\n6. **Type Hinting Consistency**:\n   - Ensure that the type hinting style is consistent throughout the codebase. The use of `dict[str, list[_t.HookType]]` is a modern type hinting style (Python 3.9+). If the rest of the codebase uses older syntax (like `Dict` from `typing`), it may be worth considering standardizing the style across the project.\n\nIn summary, while the addition of the type annotation is a positive change, it is essential to address the points mentioned above to ensure robustness, clarity, and maintainability of the code."
+    },
+    {
+      "sha": "cd90742e",
+      "message": "docs: indent continuation line in Session.get :param params: (#7460)",
+      "lines": 2,
+      "review": "The code change you provided is a documentation update, specifically an indentation adjustment for the continuation line of the `:param params:` documentation string in the `get` method of the `Session` class. Here are some points to consider during the review:\n\n1. **Documentation Clarity**: The change improves the readability of the docstring by aligning the continuation line with the first line of the parameter description. This is a good practice as it enhances clarity for users reading the documentation.\n\n2. **Consistency**: Ensure that this indentation style is consistent with other docstrings in the codebase. If other parameter descriptions are not indented similarly, it may be worth considering a broader refactor for consistency.\n\n3. **Testing**: Since this is a documentation change, it does not require additional tests. However, it would be prudent to verify that the documentation is rendered correctly in the generated documentation (e.g., Sphinx or similar tools) after this change.\n\n4. **Security Considerations**: There are no security issues directly related to this change, as it does not alter any functionality or introduce new code paths.\n\n5. **Error Handling**: There are no changes to error handling in this commit, which is appropriate since it is purely a documentation update.\n\nOverall, this change appears to be a straightforward improvement to the documentation without introducing any issues. Just ensure that the style is consistent across the codebase."
+    },
+    {
+      "sha": "6e83187b",
+      "message": "v2.34.2",
+      "lines": 4,
+      "review": "The changes in this commit are straightforward, updating the version and build number for the `requests` library. However, there are a few points to consider:\n\n1. **Versioning Consistency**: \n   - Ensure that the versioning scheme follows semantic versioning principles. The change from `2.34.1` to `2.34.2` suggests a patch update, which is appropriate if the changes are indeed bug fixes or minor improvements. If there are significant changes or new features, consider whether a minor or major version bump is more appropriate.\n\n2. **Documentation Update**:\n   - If there are any new features, bug fixes, or breaking changes associated with this version update, ensure that the changelog or release notes are updated accordingly. This is crucial for users to understand what has changed between versions.\n\n3. **Testing**:\n   - While this specific change does not directly involve code logic that requires testing, it is essential to ensure that any new features or bug fixes introduced in this version are covered by appropriate unit tests. If there are no tests added or updated in this commit, please verify that they exist in the overall project.\n\n4. **Security Considerations**:\n   - If this version addresses any security vulnerabilities, it should be documented in the release notes. Additionally, ensure that any dependencies have been reviewed for known vulnerabilities, especially if they are updated in this version.\n\n5. **Email Address**:\n   - The author email `me@kennethreitz.org` should be verified to ensure it is still valid and monitored. If this is a public repository, consider using a more generic or organizational email address for better maintainability.\n\n6. **Build Number**:\n   - The build number is updated correctly, but ensure that the build process is well-documented and that the build number is incremented consistently with each release.\n\nOverall, while the changes in this commit are minimal and primarily version-related, it is essential to ensure that the surrounding documentation, testing, and security considerations are adequately addressed."
+    }
+  ],
+  "commits": [
+    {
+      "sha": "6f66281a",
+      "message": "Add hasattr checks for remaining protocol isinstance checks (#7505)",
+      "files": [
+        {
+          "sha": "6c2f59d0282c35dbe290d24b8e1abcfa6f519983",
+          "filename": "src/requests/_types.py",
+          "status": "modified",
+          "additions": 5,
+          "deletions": 0,
+          "changes": 5,
+          "blob_url": "https://github.com/psf/requests/blob/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/src%2Frequests%2F_types.py",
+          "raw_url": "https://github.com/psf/requests/raw/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/src%2Frequests%2F_types.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F_types.py?ref=6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43",
+          "patch": "@@ -29,6 +29,11 @@ class SupportsRead(Protocol[_T_co]):\n     def read(self, length: int = ..., /) -> _T_co: ...\n \n \n+def has_read(obj: Any) -> TypeIs[SupportsRead[str | bytes]]:\n+    \"\"\"Check if obj supports read, including __getattr__ based proxies.\"\"\"\n+    return isinstance(obj, SupportsRead) or hasattr(obj, \"read\")\n+\n+\n @runtime_checkable\n class SupportsItems(Protocol[_KT_co, _VT_co]):\n     def items(self) -> Iterable[tuple[_KT_co, _VT_co]]: ..."
+        },
+        {
+          "sha": "17b39cd1b3e132a05ca9f1b28e53a28e3fd6779e",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 4,
+          "deletions": 7,
+          "changes": 11,
+          "blob_url": "https://github.com/psf/requests/blob/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43",
+          "patch": "@@ -35,8 +35,8 @@\n from urllib3.filepost import encode_multipart_formdata\n from urllib3.util import parse_url\n \n+from . import _types as _t\n from ._internal_utils import to_native_string, unicode_is_ascii\n-from ._types import SupportsRead as _SupportsRead\n from .auth import HTTPBasicAuth\n from .compat import (\n     JSONDecodeError,\n@@ -87,7 +87,6 @@\n \n     from typing_extensions import Self\n \n-    from . import _types as _t\n     from .adapters import HTTPAdapter\n     from .cookies import RequestsCookieJar\n \n@@ -161,7 +160,7 @@ def _encode_params(\n \n         if isinstance(data, (str, bytes)):\n             return data\n-        elif isinstance(data, _SupportsRead):\n+        elif _t.has_read(data):\n             return data\n         elif hasattr(data, \"__iter__\"):\n             result: list[tuple[bytes, bytes]] = []\n@@ -236,9 +235,7 @@ def _encode_files(\n \n             if isinstance(fp, (str, bytes, bytearray)):\n                 fdata = fp\n-            # data that proxies attributes to underlying objects needs hasattr\n-            # defensive check for untyped callers\n-            elif isinstance(fp, _SupportsRead) or hasattr(fp, \"read\"):\n+            elif _t.has_read(fp):\n                 fdata = fp.read()\n             elif fp is None:  # defensive check for untyped callers\n                 continue\n@@ -641,7 +638,7 @@ def prepare_body(\n             else:\n                 if raw_data:\n                     body = self._encode_params(raw_data)\n-                    if isinstance(data, basestring) or isinstance(data, _SupportsRead):\n+                    if isinstance(data, basestring) or _t.has_read(data):\n                         content_type = None\n                     else:\n                         content_type = \"application/x-www-form-urlencoded\""
+        },
+        {
+          "sha": "8bcb81d8b17f28cd76188b210035036cdd401975",
+          "filename": "tests/test_requests.py",
+          "status": "modified",
+          "additions": 15,
+          "deletions": 0,
+          "changes": 15,
+          "blob_url": "https://github.com/psf/requests/blob/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/tests%2Ftest_requests.py",
+          "raw_url": "https://github.com/psf/requests/raw/6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43/tests%2Ftest_requests.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/tests%2Ftest_requests.py?ref=6f66281a1d6326b1b9c4ac09ca30de0fc4e6ef43",
+          "patch": "@@ -1098,6 +1098,21 @@ def test_post_named_tempfile(self, httpbin):\n         assert r.status_code == 200\n         assert r.json()[\"files\"][\"file\"] == \"named temp file contents\\n\"\n \n+    def test_post_getattr_proxy_read_only(self, httpbin):\n+\n+        class ReadProxy:\n+            def __init__(self):\n+                self._file = io.BytesIO(b\"streamed body\")\n+\n+            def __getattr__(self, name):\n+                if name == \"__iter__\":\n+                    raise AttributeError(name)\n+                return getattr(self._file, name)\n+\n+        r = requests.post(httpbin(\"post\"), data=ReadProxy())\n+        assert r.status_code == 200\n+        assert r.json()[\"data\"] == \"streamed body\"\n+\n     @pytest.mark.parametrize(\n         \"data\",\n         ("
+        }
+      ],
+      "lines": 31
+    },
+    {
+      "sha": "6f205ff4",
+      "message": "Fix `_encode_files` detection for `__getattr__`-based file wrappers (#",
+      "files": [
+        {
+          "sha": "ebeba1e39fc549a1e6dafc2cf74f372dc01e819c",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 3,
+          "deletions": 1,
+          "changes": 4,
+          "blob_url": "https://github.com/psf/requests/blob/6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6",
+          "patch": "@@ -236,7 +236,9 @@ def _encode_files(\n \n             if isinstance(fp, (str, bytes, bytearray)):\n                 fdata = fp\n-            elif isinstance(fp, _SupportsRead):  # defensive check for untyped callers\n+            # data that proxies attributes to underlying objects needs hasattr\n+            # defensive check for untyped callers\n+            elif isinstance(fp, _SupportsRead) or hasattr(fp, \"read\"):\n                 fdata = fp.read()\n             elif fp is None:  # defensive check for untyped callers\n                 continue"
+        },
+        {
+          "sha": "2cea2fe8d9e9f4c1a32b5e8acaf3c942f3359b83",
+          "filename": "tests/test_requests.py",
+          "status": "modified",
+          "additions": 11,
+          "deletions": 0,
+          "changes": 11,
+          "blob_url": "https://github.com/psf/requests/blob/6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6/tests%2Ftest_requests.py",
+          "raw_url": "https://github.com/psf/requests/raw/6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6/tests%2Ftest_requests.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/tests%2Ftest_requests.py?ref=6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6",
+          "patch": "@@ -1087,6 +1087,17 @@ def test_different_encodings_dont_break_post(self, httpbin):\n             )\n         assert r.status_code == 200\n \n+    def test_post_named_tempfile(self, httpbin):\n+        with tempfile.NamedTemporaryFile(mode=\"w+\") as f:\n+            f.write(\"named temp file contents\\n\")\n+            f.seek(0)\n+            r = requests.post(\n+                httpbin(\"post\"),\n+                files={\"file\": f},\n+            )\n+        assert r.status_code == 200\n+        assert r.json()[\"files\"][\"file\"] == \"named temp file contents\\n\"\n+\n     @pytest.mark.parametrize(\n         \"data\",\n         ("
+        }
+      ],
+      "lines": 15
+    },
+    {
+      "sha": "1190afd1",
+      "message": "Add type annotation for `Request.hooks` (#7498)",
+      "files": [
+        {
+          "sha": "c6ffb1fd6817bc2681049ccf01361e34f082d13a",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 0,
+          "changes": 1,
+          "blob_url": "https://github.com/psf/requests/blob/1190afd14fca74292946d62c4c8169880a47ff67/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/1190afd14fca74292946d62c4c8169880a47ff67/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=1190afd14fca74292946d62c4c8169880a47ff67",
+          "patch": "@@ -308,6 +308,7 @@ class Request(RequestHooksMixin):\n       <PreparedRequest [GET]>\n     \"\"\"\n \n+    hooks: dict[str, list[_t.HookType]]\n     method: str | None\n     url: _t.UriType | None\n     headers: Mapping[str, str | bytes]"
+        }
+      ],
+      "lines": 1
+    },
+    {
+      "sha": "cd90742e",
+      "message": "docs: indent continuation line in Session.get :param params: (#7460)",
+      "files": [
+        {
+          "sha": "c2ab37391d56085ccfde6275e05534c4de18d9a9",
+          "filename": "src/requests/sessions.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "blob_url": "https://github.com/psf/requests/blob/cd90742ed94d901759e26766197d0ce7c7bd9c8e/src%2Frequests%2Fsessions.py",
+          "raw_url": "https://github.com/psf/requests/raw/cd90742ed94d901759e26766197d0ce7c7bd9c8e/src%2Frequests%2Fsessions.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fsessions.py?ref=cd90742ed94d901759e26766197d0ce7c7bd9c8e",
+          "patch": "@@ -662,7 +662,7 @@ def get(\n \n         :param url: URL for the new :class:`Request` object.\n         :param params: (optional) Dictionary, list of tuples or bytes to send\n-        in the query string for the :class:`Request`.\n+            in the query string for the :class:`Request`.\n         :param \\*\\*kwargs: Optional arguments that ``request`` takes.\n         :rtype: requests.Response\n         \"\"\""
+        }
+      ],
+      "lines": 2
+    },
+    {
+      "sha": "6e83187b",
+      "message": "v2.34.2",
+      "files": [
+        {
+          "sha": "fea814e58271ecb7a1088ce9ac636791a2cc1289",
+          "filename": "src/requests/__version__.py",
+          "status": "modified",
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "blob_url": "https://github.com/psf/requests/blob/6e83187b8feb273ed4c6cdab5efd8d54901dfab3/src%2Frequests%2F__version__.py",
+          "raw_url": "https://github.com/psf/requests/raw/6e83187b8feb273ed4c6cdab5efd8d54901dfab3/src%2Frequests%2F__version__.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F__version__.py?ref=6e83187b8feb273ed4c6cdab5efd8d54901dfab3",
+          "patch": "@@ -5,8 +5,8 @@\n __title__ = \"requests\"\n __description__ = \"Python HTTP for Humans.\"\n __url__ = \"https://requests.readthedocs.io\"\n-__version__ = \"2.34.1\"\n-__build__ = 0x023401\n+__version__ = \"2.34.2\"\n+__build__ = 0x023402\n __author__ = \"Kenneth Reitz\"\n __author_email__ = \"me@kennethreitz.org\"\n __license__ = \"Apache-2.0\""
+        }
+      ],
+      "lines": 4
+    },
+    {
+      "sha": "84d10f0b",
+      "message": "Move Request.headers back to Mapping (#7441)",
+      "files": [
+        {
+          "sha": "b2273d612b17726609afb45a29058625b79eae60",
+          "filename": "src/requests/_types.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "blob_url": "https://github.com/psf/requests/blob/84d10f0be83e8f6aeca8a05230c52216431c4d0b/src%2Frequests%2F_types.py",
+          "raw_url": "https://github.com/psf/requests/raw/84d10f0be83e8f6aeca8a05230c52216431c4d0b/src%2Frequests%2F_types.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F_types.py?ref=84d10f0be83e8f6aeca8a05230c52216431c4d0b",
+          "patch": "@@ -109,7 +109,7 @@ class _ValidatedRequest(PreparedRequest):\n         bytes | str | Iterable[bytes | str] | SupportsRead[bytes | str] | None\n     )\n \n-    HeadersType: TypeAlias = MutableMapping[str, str | bytes] | None\n+    HeadersType: TypeAlias = Mapping[str, str | bytes] | None\n \n     CookiesType: TypeAlias = RequestsCookieJar | Mapping[str, str]\n "
+        },
+        {
+          "sha": "59b5615960d19849d2dd4a85de4fdc079969ddae",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 2,
+          "changes": 3,
+          "blob_url": "https://github.com/psf/requests/blob/84d10f0be83e8f6aeca8a05230c52216431c4d0b/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/84d10f0be83e8f6aeca8a05230c52216431c4d0b/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=84d10f0be83e8f6aeca8a05230c52216431c4d0b",
+          "patch": "@@ -83,7 +83,6 @@\n )\n \n if TYPE_CHECKING:\n-    from collections.abc import MutableMapping\n     from http.cookiejar import CookieJar\n \n     from typing_extensions import Self\n@@ -311,7 +310,7 @@ class Request(RequestHooksMixin):\n \n     method: str | None\n     url: _t.UriType | None\n-    headers: MutableMapping[str, str | bytes]\n+    headers: Mapping[str, str | bytes]\n     files: _t.FilesType\n     data: _t.DataType\n     json: _t.JsonType"
+        }
+      ],
+      "lines": 5
+    },
+    {
+      "sha": "b7b549b5",
+      "message": "v2.34.1",
+      "files": [
+        {
+          "sha": "bf5a4e9bc25d541cd0466cc5fee28e6597f21e0d",
+          "filename": "src/requests/__version__.py",
+          "status": "modified",
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "blob_url": "https://github.com/psf/requests/blob/b7b549b54571d03950b16afd2d01bc6ff0348224/src%2Frequests%2F__version__.py",
+          "raw_url": "https://github.com/psf/requests/raw/b7b549b54571d03950b16afd2d01bc6ff0348224/src%2Frequests%2F__version__.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F__version__.py?ref=b7b549b54571d03950b16afd2d01bc6ff0348224",
+          "patch": "@@ -5,8 +5,8 @@\n __title__ = \"requests\"\n __description__ = \"Python HTTP for Humans.\"\n __url__ = \"https://requests.readthedocs.io\"\n-__version__ = \"2.34.0\"\n-__build__ = 0x023400\n+__version__ = \"2.34.1\"\n+__build__ = 0x023401\n __author__ = \"Kenneth Reitz\"\n __author_email__ = \"me@kennethreitz.org\"\n __license__ = \"Apache-2.0\""
+        }
+      ],
+      "lines": 4
+    },
+    {
+      "sha": "e511bc72",
+      "message": "Fix mutability issues with headers input types (#7431)",
+      "files": [
+        {
+          "sha": "f4573cdd07d27edbe5a75c344cb196c502e135b0",
+          "filename": "src/requests/_types.py",
+          "status": "modified",
+          "additions": 2,
+          "deletions": 3,
+          "changes": 5,
+          "blob_url": "https://github.com/psf/requests/blob/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2F_types.py",
+          "raw_url": "https://github.com/psf/requests/raw/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2F_types.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F_types.py?ref=e511bc72777a94c45d004e010c597925092e1efe",
+          "patch": "@@ -109,8 +109,7 @@ class _ValidatedRequest(PreparedRequest):\n         bytes | str | Iterable[bytes | str] | SupportsRead[bytes | str] | None\n     )\n \n-    HeadersType: TypeAlias = CaseInsensitiveDict[str] | Mapping[str, str | bytes]\n-    HeadersUpdateType: TypeAlias = Mapping[str, str | bytes | None]\n+    HeadersType: TypeAlias = MutableMapping[str, str | bytes] | None\n \n     CookiesType: TypeAlias = RequestsCookieJar | Mapping[str, str]\n \n@@ -151,7 +150,7 @@ class _ValidatedRequest(PreparedRequest):\n     # TypedDicts for Unpack kwargs (PEP 692)\n \n     class BaseRequestKwargs(TypedDict, total=False):\n-        headers: Mapping[str, str | bytes] | None\n+        headers: HeadersType\n         cookies: RequestsCookieJar | CookieJar | dict[str, str] | None\n         files: FilesType\n         auth: AuthType"
+        },
+        {
+          "sha": "78eb52c311a99b3b60d06b7e6fa511d6e619452a",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 3,
+          "deletions": 2,
+          "changes": 5,
+          "blob_url": "https://github.com/psf/requests/blob/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=e511bc72777a94c45d004e010c597925092e1efe",
+          "patch": "@@ -83,6 +83,7 @@\n )\n \n if TYPE_CHECKING:\n+    from collections.abc import MutableMapping\n     from http.cookiejar import CookieJar\n \n     from typing_extensions import Self\n@@ -310,7 +311,7 @@ class Request(RequestHooksMixin):\n \n     method: str | None\n     url: _t.UriType | None\n-    headers: CaseInsensitiveDict[str] | Mapping[str, str | bytes] | None\n+    headers: MutableMapping[str, str | bytes]\n     files: _t.FilesType\n     data: _t.DataType\n     json: _t.JsonType\n@@ -322,7 +323,7 @@ def __init__(\n         self,\n         method: str | None = None,\n         url: _t.UriType | None = None,\n-        headers: Mapping[str, str | bytes] | None = None,\n+        headers: _t.HeadersType = None,\n         files: _t.FilesType = None,\n         data: _t.DataType = None,\n         params: _t.ParamsType = None,"
+        },
+        {
+          "sha": "feaf34053a911d4b9051069aeb57e595b4d00165",
+          "filename": "src/requests/sessions.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "blob_url": "https://github.com/psf/requests/blob/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2Fsessions.py",
+          "raw_url": "https://github.com/psf/requests/raw/e511bc72777a94c45d004e010c597925092e1efe/src%2Frequests%2Fsessions.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fsessions.py?ref=e511bc72777a94c45d004e010c597925092e1efe",
+          "patch": "@@ -560,7 +560,7 @@ def request(\n         url: _t.UriType,\n         params: _t.ParamsType = None,\n         data: _t.DataType = None,\n-        headers: Mapping[str, str | bytes] | None = None,\n+        headers: _t.HeadersType = None,\n         cookies: RequestsCookieJar | CookieJar | dict[str, str] | None = None,\n         files: _t.FilesType = None,\n         auth: _t.AuthType = None,"
+        }
+      ],
+      "lines": 12
+    },
+    {
+      "sha": "5691f596",
+      "message": "Update JsonType containers to read-based collections (#7436)",
+      "files": [
+        {
+          "sha": "4346358f484c2517396a335fd9f3c6b7c824d8d6",
+          "filename": "src/requests/_types.py",
+          "status": "modified",
+          "additions": 8,
+          "deletions": 2,
+          "changes": 10,
+          "blob_url": "https://github.com/psf/requests/blob/5691f596134c2feb121e595c77a0178921fcce61/src%2Frequests%2F_types.py",
+          "raw_url": "https://github.com/psf/requests/raw/5691f596134c2feb121e595c77a0178921fcce61/src%2Frequests%2F_types.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F_types.py?ref=5691f596134c2feb121e595c77a0178921fcce61",
+          "patch": "@@ -9,7 +9,7 @@\n \n from __future__ import annotations\n \n-from collections.abc import Callable, Iterable, Mapping, MutableMapping\n+from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence\n from typing import (\n     TYPE_CHECKING,\n     Any,\n@@ -139,7 +139,13 @@ class _ValidatedRequest(PreparedRequest):\n     VerifyType: TypeAlias = bool | str\n     CertType: TypeAlias = str | tuple[str, str] | None\n     JsonType: TypeAlias = (\n-        None | bool | int | float | str | list[\"JsonType\"] | dict[str, \"JsonType\"]\n+        None\n+        | bool\n+        | int\n+        | float\n+        | str\n+        | Sequence[\"JsonType\"]\n+        | Mapping[str, \"JsonType\"]\n     )\n \n     # TypedDicts for Unpack kwargs (PEP 692)"
+        }
+      ],
+      "lines": 10
+    },
+    {
+      "sha": "2144213c",
+      "message": "Constrain Response.reason to str (#7437)",
+      "files": [
+        {
+          "sha": "12365e220e577d6674a3db76aec31f1b9a8e8991",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 2,
+          "deletions": 2,
+          "changes": 4,
+          "blob_url": "https://github.com/psf/requests/blob/2144213c307691710c9d665700860fc4993c3035/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/2144213c307691710c9d665700860fc4993c3035/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=2144213c307691710c9d665700860fc4993c3035",
+          "patch": "@@ -741,7 +741,7 @@ class Response:\n     url: str\n     encoding: str | None\n     history: list[Response]\n-    reason: str | None\n+    reason: str\n     cookies: RequestsCookieJar\n     elapsed: datetime.timedelta\n     request: PreparedRequest\n@@ -790,7 +790,7 @@ def __init__(self) -> None:\n         self.history = []\n \n         #: Textual reason of responded HTTP Status, e.g. \"Not Found\" or \"OK\".\n-        self.reason = None\n+        self.reason = None  # type: ignore[assignment]\n \n         #: A CookieJar of Cookies the server sent back.\n         self.cookies = cookiejar_from_dict({})"
+        }
+      ],
+      "lines": 4
+    },
+    {
+      "sha": "6404f345",
+      "message": "Fix `prepare_body` stream detection for `__getattr__`-based file wrapp",
+      "files": [
+        {
+          "sha": "57e114866da042a866dced7a2f55a8a7da597878",
+          "filename": "src/requests/models.py",
+          "status": "modified",
+          "additions": 3,
+          "deletions": 3,
+          "changes": 6,
+          "blob_url": "https://github.com/psf/requests/blob/6404f345e562d962abe6700a1c357ec1e7e18232/src%2Frequests%2Fmodels.py",
+          "raw_url": "https://github.com/psf/requests/raw/6404f345e562d962abe6700a1c357ec1e7e18232/src%2Frequests%2Fmodels.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2Fmodels.py?ref=6404f345e562d962abe6700a1c357ec1e7e18232",
+          "patch": "@@ -596,9 +596,9 @@ def prepare_body(\n             if not isinstance(body, bytes):\n                 body = body.encode(\"utf-8\")\n \n-        if isinstance(data, Iterable) and not isinstance(\n-            data, (str, bytes, list, tuple, Mapping)\n-        ):\n+        # data that proxies attributes to underlying objects needs hasattr\n+        is_iterable = isinstance(data, Iterable) or hasattr(data, \"__iter__\")\n+        if is_iterable and not isinstance(data, (str, bytes, list, tuple, Mapping)):\n             try:\n                 length = super_len(data)\n             except (TypeError, AttributeError, UnsupportedOperation):"
+        },
+        {
+          "sha": "571535fe7998dcc7a747266f4461f96fcea3c2d3",
+          "filename": "tests/test_requests.py",
+          "status": "modified",
+          "additions": 15,
+          "deletions": 0,
+          "changes": 15,
+          "blob_url": "https://github.com/psf/requests/blob/6404f345e562d962abe6700a1c357ec1e7e18232/tests%2Ftest_requests.py",
+          "raw_url": "https://github.com/psf/requests/raw/6404f345e562d962abe6700a1c357ec1e7e18232/tests%2Ftest_requests.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/tests%2Ftest_requests.py?ref=6404f345e562d962abe6700a1c357ec1e7e18232",
+          "patch": "@@ -2073,6 +2073,21 @@ def __iter__(self):\n \n         assert \"Unable to rewind request body\" in str(e)\n \n+    def test_getattr_proxy_stream_follows_redirect(self, httpbin):\n+        \"\"\"Ensure stream wrappers that don't implement __iter__ directly are still detected.\"\"\"\n+\n+        class AttrProxy:\n+            def __init__(self):\n+                self._file = io.BytesIO(b\"data\")\n+\n+            def __getattr__(self, name):\n+                return getattr(self._file, name)\n+\n+        r = requests.post(\n+            httpbin(\"redirect-to?url=/post&status_code=307\"), data=AttrProxy()\n+        )\n+        assert r.json()[\"data\"] == \"data\"\n+\n     def _patch_adapter_gzipped_redirect(self, session, url):\n         adapter = session.get_adapter(url=url)\n         org_build_response = adapter.build_response"
+        }
+      ],
+      "lines": 21
+    },
+    {
+      "sha": "0b401c76",
+      "message": "v2.34.0",
+      "files": [
+        {
+          "sha": "872a8aaa227c3b6a38008d06c4c433c80e30a3e9",
+          "filename": "src/requests/__version__.py",
+          "status": "modified",
+          "additions": 1,
+          "deletions": 1,
+          "changes": 2,
+          "blob_url": "https://github.com/psf/requests/blob/0b401c76b6e80a4eecf3c690085b2553f6e261ca/src%2Frequests%2F__version__.py",
+          "raw_url": "https://github.com/psf/requests/raw/0b401c76b6e80a4eecf3c690085b2553f6e261ca/src%2Frequests%2F__version__.py",
+          "contents_url": "https://api.github.com/repos/psf/requests/contents/src%2Frequests%2F__version__.py?ref=0b401c76b6e80a4eecf3c690085b2553f6e261ca",
+          "patch": "@@ -5,7 +5,7 @@\n __title__ = \"requests\"\n __description__ = \"Python HTTP for Humans.\"\n __url__ = \"https://requests.readthedocs.io\"\n-__version__ = \"2.34.0.dev1\"\n+__version__ = \"2.34.0\"\n __build__ = 0x023400\n __author__ = \"Kenneth Reitz\"\n __author_email__ = \"me@kennethreitz.org\""
+        }
+      ],
+      "lines": 2
+    }
+  ]
+}
