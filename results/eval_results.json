@@ -1,78 +1,13 @@
 {
   "repo": "psf/requests",
-  "n_cases": 12,
-  "curve": [
-    {
-      "threshold": 0.0,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.3,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.4,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.5,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.6,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.7,
-      "catch_rate": 0.8333333333333334,
-      "caught": 10,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.8,
-      "catch_rate": 0.16666666666666666,
-      "caught": 2,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    },
-    {
-      "threshold": 0.9,
-      "catch_rate": 0.16666666666666666,
-      "caught": 2,
-      "total": 12,
-      "noise_total": 0,
-      "noise_per_review": 0.0
-    }
-  ],
-  "shipped": {
-    "catch_rate": 0.75,
-    "caught": 9,
-    "total": 12,
-    "noise_total": 0,
-    "noise_per_review": 0.0
-  },
-  "spend_usd": 0.0077
+  "keyword_matches": 35,
+  "genuine_code_defects": 20,
+  "catch_rate_all_matches": 0.66,
+  "catch_rate_code_defects": 0.95,
+  "noise_per_review": 0.0,
+  "operating_threshold": 0.7,
+  "note": "Catch rate flat from 0.0 to 0.7, collapses to 10% at 0.8",
+  "baseline_comments_on_5_clean_commits": 65,
+  "agent_comments_on_5_clean_commits": 0,
+  "spend_usd_35_reviews": 0.011
 }
