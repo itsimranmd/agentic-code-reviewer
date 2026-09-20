@@ -1,0 +1,197 @@
+[
+  {
+    "sha": "6f205ff4",
+    "message": "Fix `_encode_files` detection for `__getattr__`-based file wrappers (#",
+    "lines": 4,
+    "buggy_lines": [
+      "elif isinstance(fp, _SupportsRead):  # defensive check for untyped callers"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/models.py",
+        "patch": "@@ -236,7 +236,9 @@ def _encode_files(\n \n             if isinstance(fp, (str, bytes, bytearray)):\n                 fdata = fp\n+            elif isinstance(fp, _SupportsRead):  # defensive check for untyped callers\n-            # data that proxies attributes to underlying objects needs hasattr\n-            # defensive check for untyped callers\n-            elif isinstance(fp, _SupportsRead) or hasattr(fp, \"read\"):\n                 fdata = fp.read()\n             elif fp is None:  # defensive check for untyped callers\n                 continue"
+      }
+    ]
+  },
+  {
+    "sha": "6404f345",
+    "message": "Fix `prepare_body` stream detection for `__getattr__`-based file wrapp",
+    "lines": 6,
+    "buggy_lines": [
+      "if isinstance(data, Iterable) and not isinstance(",
+      "data, (str, bytes, list, tuple, Mapping)",
+      "):"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/models.py",
+        "patch": "@@ -596,9 +596,9 @@ def prepare_body(\n             if not isinstance(body, bytes):\n                 body = body.encode(\"utf-8\")\n \n+        if isinstance(data, Iterable) and not isinstance(\n+            data, (str, bytes, list, tuple, Mapping)\n+        ):\n-        # data that proxies attributes to underlying objects needs hasattr\n-        is_iterable = isinstance(data, Iterable) or hasattr(data, \"__iter__\")\n-        if is_iterable and not isinstance(data, (str, bytes, list, tuple, Mapping)):\n             try:\n                 length = super_len(data)\n             except (TypeError, AttributeError, UnsupportedOperation):"
+      }
+    ]
+  },
+  {
+    "sha": "b684dcb9",
+    "message": "sessions: fix hooks type (#7425)",
+    "lines": 4,
+    "buggy_lines": [
+      "hooks: HooksType",
+      "hooks: _t.HooksType = None,"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/_types.py",
+        "patch": "@@ -150,7 +150,7 @@ class BaseRequestKwargs(TypedDict, total=False):\n         timeout: TimeoutType\n         allow_redirects: bool\n         proxies: dict[str, str] | None\n+        hooks: HooksType\n-        hooks: HooksInputType | None\n         stream: bool | None\n         verify: VerifyType | None\n         cert: CertType"
+      },
+      {
+        "filename": "src/requests/sessions.py",
+        "patch": "@@ -567,7 +567,7 @@ def request(\n         timeout: _t.TimeoutType = None,\n         allow_redirects: bool = True,\n         proxies: dict[str, str] | None = None,\n+        hooks: _t.HooksType = None,\n-        hooks: _t.HooksInputType | None = None,\n         stream: bool | None = None,\n         verify: _t.VerifyType | None = None,\n         cert: _t.CertType = None,"
+      }
+    ]
+  },
+  {
+    "sha": "27e09819",
+    "message": "Fix remaining typos (#7395)",
+    "lines": 2,
+    "buggy_lines": [
+      "The PreparedReqest being sent over the connection."
+    ],
+    "files": [
+      {
+        "filename": "src/requests/adapters.py",
+        "patch": "@@ -401,7 +401,7 @@ def build_connection_pool_key_attributes(self, request, verify, cert=None):\n         alter the other keys to ensure the desired behaviour.\n \n         :param request:\n+            The PreparedReqest being sent over the connection.\n-            The PreparedRequest being sent over the connection.\n         :type request:\n             :class:`~requests.models.PreparedRequest`\n         :param verify:"
+      }
+    ]
+  },
+  {
+    "sha": "f0198e6d",
+    "message": "Fix malformed value parsing for Content-Type (#7309)",
+    "lines": 15,
+    "buggy_lines": [
+      "\"\"\"Returns content type and parameters from given header",
+      "parameters",
+      "items_to_strip = \"\\\"' \"",
+      "if param:",
+      "key, value = param, True",
+      "index_of_equals = param.find(\"=\")",
+      "if index_of_equals != -1:",
+      "key = param[:index_of_equals].strip(items_to_strip)",
+      "value = param[index_of_equals + 1 :].strip(items_to_strip)"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/utils.py",
+        "patch": "@@ -502,26 +502,23 @@ def get_encodings_from_content(content):\n \n \n def _parse_content_type_header(header):\n+    \"\"\"Returns content type and parameters from given header\n-    \"\"\"Returns content type and parameters from given header.\n \n     :param header: string\n     :return: tuple containing content type and dictionary of\n+         parameters\n-         parameters.\n     \"\"\"\n \n     tokens = header.split(\";\")\n     content_type, params = tokens[0].strip(), tokens[1:]\n     params_dict = {}\n+    items_to_strip = \"\\\"' \"\n-    strip_chars = \"\\\"' \"\n \n     for param in params:\n         param = param.strip()\n+        if param:\n+            key, value = param, True\n+            index_of_equals = param.find(\"=\")\n+            if index_of_equals != -1:\n+                key = param[:index_of_equals].strip(items_to_strip)\n+                value = param[index_of_equals + 1 :].strip(items_to_strip)\n-        if param and (idx := param.find(\"=\")) != -1:\n-            key = param[:idx].strip(strip_chars)\n-            value = param[idx + 1 :].strip(strip_chars)\n             params_dict[key.lower()] = value\n     return content_type, params_dict\n "
+      }
+    ]
+  },
+  {
+    "sha": "bc7dd0fc",
+    "message": "Fix cosmetic header validity parsing regex (#7308)",
+    "lines": 8,
+    "buggy_lines": [
+      "_VALID_HEADER_NAME_RE_BYTE = re.compile(rb\"^[^:\\s][^:\\r\\n]*$\")",
+      "_VALID_HEADER_NAME_RE_STR = re.compile(r\"^[^:\\s][^:\\r\\n]*$\")",
+      "_VALID_HEADER_VALUE_RE_BYTE = re.compile(rb\"^\\S[^\\r\\n]*$|^$\")",
+      "_VALID_HEADER_VALUE_RE_STR = re.compile(r\"^\\S[^\\r\\n]*$|^$\")"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/_internal_utils.py",
+        "patch": "@@ -10,10 +10,10 @@\n \n from .compat import builtin_str\n \n+_VALID_HEADER_NAME_RE_BYTE = re.compile(rb\"^[^:\\s][^:\\r\\n]*$\")\n+_VALID_HEADER_NAME_RE_STR = re.compile(r\"^[^:\\s][^:\\r\\n]*$\")\n+_VALID_HEADER_VALUE_RE_BYTE = re.compile(rb\"^\\S[^\\r\\n]*$|^$\")\n+_VALID_HEADER_VALUE_RE_STR = re.compile(r\"^\\S[^\\r\\n]*$|^$\")\n-_VALID_HEADER_NAME_RE_BYTE = re.compile(rb\"^[^:\\s][^:\\r\\n]*\\Z\")\n-_VALID_HEADER_NAME_RE_STR = re.compile(r\"^[^:\\s][^:\\r\\n]*\\Z\")\n-_VALID_HEADER_VALUE_RE_BYTE = re.compile(rb\"^\\S[^\\r\\n]*\\Z|^\\Z\")\n-_VALID_HEADER_VALUE_RE_STR = re.compile(r\"^\\S[^\\r\\n]*\\Z|^\\Z\")\n \n _HEADER_VALIDATORS_STR = (_VALID_HEADER_NAME_RE_STR, _VALID_HEADER_VALUE_RE_STR)\n _HEADER_VALIDATORS_BYTE = (_VALID_HEADER_NAME_RE_BYTE, _VALID_HEADER_VALUE_RE_BYTE)"
+      }
+    ]
+  },
+  {
+    "sha": "47914226",
+    "message": "Fix empty netrc entry usage (#7205)",
+    "lines": 2,
+    "buggy_lines": [
+      "if _netrc:"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/utils.py",
+        "patch": "@@ -231,7 +231,7 @@ def get_netrc_auth(url, raise_errors=False):\n \n         try:\n             _netrc = netrc(netrc_path).authenticators(host)\n+            if _netrc:\n-            if _netrc and any(_netrc):\n                 # Return with login / password\n                 login_i = 0 if _netrc[0] else 1\n                 return (_netrc[login_i], _netrc[2])"
+      }
+    ]
+  },
+  {
+    "sha": "5b4b64c3",
+    "message": "Add more tests to prevent regression of CVE 2024 47081",
+    "lines": 9,
+    "buggy_lines": [
+      "try:",
+      "loc = os.path.expanduser(f)",
+      "except KeyError:",
+      "# os.path.expanduser can fail when $HOME is undefined and",
+      "# getpwuid fails. See https://bugs.python.org/issue20164 &",
+      "# https://github.com/psf/requests/issues/1846",
+      "return"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/utils.py",
+        "patch": "@@ -219,14 +219,7 @@ def get_netrc_auth(url, raise_errors=False):\n         netrc_path = None\n \n         for f in netrc_locations:\n+            try:\n+                loc = os.path.expanduser(f)\n+            except KeyError:\n+                # os.path.expanduser can fail when $HOME is undefined and\n+                # getpwuid fails. See https://bugs.python.org/issue20164 &\n+                # https://github.com/psf/requests/issues/1846\n+                return\n+\n-            loc = os.path.expanduser(f)\n             if os.path.exists(loc):\n                 netrc_path = loc\n                 break"
+      }
+    ]
+  },
+  {
+    "sha": "eeafb6ab",
+    "message": "Merge pull request #6662 from sigmavirus24/fix-tls-floppy",
+    "lines": 18,
+    "buggy_lines": [
+      "request: \"PreparedRequest\", verify: \"bool | str | None\"",
+      "def _get_connection(self, request, verify, proxies=None):",
+      "host_params, pool_kwargs = _urllib3_request_context(request, verify)",
+      "conn = self._get_connection(request, verify, proxies)"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/adapters.py",
+        "patch": "@@ -73,7 +73,9 @@ def SOCKSProxyManager(*args, **kwargs):\n \n \n def _urllib3_request_context(\n+    request: \"PreparedRequest\", verify: \"bool | str | None\"\n-    request: \"PreparedRequest\",\n-    verify: \"bool | str | None\",\n-    client_cert: \"typing.Tuple[str, str] | str | None\",\n ) -> \"(typing.Dict[str, typing.Any], typing.Dict[str, typing.Any])\":\n     host_params = {}\n     pool_kwargs = {}\n@@ -86,6 +88,14 @@ def _urllib3_request_context(\n     if isinstance(verify, str):\n         pool_kwargs[\"ca_certs\"] = verify\n     pool_kwargs[\"cert_reqs\"] = cert_reqs\n-    if client_cert is not None:\n-        if isinstance(client_cert, tuple) and len(client_cert) == 2:\n-            pool_kwargs[\"cert_file\"] = client_cert[0]\n-            pool_kwargs[\"key_file\"] = client_cert[1]\n-        else:\n-            # According to our docs, we allow users to specify just the client\n-            # cert path\n-            pool_kwargs[\"cert_file\"] = client_cert\n     host_params = {\n         \"scheme\": scheme,\n         \"host\": parsed_request_url.hostname,\n@@ -354,13 +364,13 @@ def build_response(self, req, resp):\n \n         return response\n \n+    def _get_connection(self, request, verify, proxies=None):\n-    def _get_connection(self, request, verify, proxies=None, cert=None):\n         # Replace the existing get_connection without breaking things and\n         # ensure that TLS settings are considered when we interact with\n         # urllib3 HTTP Pools\n         proxy = select_proxy(request.url, proxies)\n         try:\n+            host_params, pool_kwargs = _urllib3_request_context(request, verify)\n-            host_params, pool_kwargs = _urllib3_request_context(request, verify, cert)\n         except ValueError as e:\n             raise InvalidURL(e, request=request)\n         if proxy:\n@@ -509,7 +519,7 @@ def send(\n         \"\"\"\n \n         try:\n+            conn = self._get_connection(request, verify, proxies)\n-            conn = self._get_connection(request, verify, proxies=proxies, cert=cert)\n         except LocationValueError as e:\n             raise InvalidURL(e, request=request)\n "
+      }
+    ]
+  },
+  {
+    "sha": "3b5978fc",
+    "message": "Merge pull request #6592 from atatuzuner61/bug/6584",
+    "lines": 2,
+    "buggy_lines": [
+      "425: (\"unordered_collection\", \"unordered\"),"
+    ],
+    "files": [
+      {
+        "filename": "src/requests/status_codes.py",
+        "patch": "@@ -79,7 +79,7 @@\n     422: (\"unprocessable_entity\", \"unprocessable\"),\n     423: (\"locked\",),\n     424: (\"failed_dependency\", \"dependency\"),\n+    425: (\"unordered_collection\", \"unordered\"),\n-    425: (\"unordered_collection\", \"unordered\", \"too_early\"),\n     426: (\"upgrade_required\", \"upgrade\"),\n     428: (\"precondition_required\", \"precondition\"),\n     429: (\"too_many_requests\", \"too_many\"),"
+      }
+    ]
+  },
+  {
+    "sha": "c32b0462",
+    "message": "Fix missing space in error message",
+    "lines": 2,
+    "buggy_lines": [
+      "f\"Invalid leading whitespace, reserved character(s), or return\""
+    ],
+    "files": [
+      {
+        "filename": "src/requests/utils.py",
+        "patch": "@@ -1051,7 +1051,7 @@ def _validate_header_part(header, header_part, header_validator_index):\n     if not validator.match(header_part):\n         header_kind = \"name\" if header_validator_index == 0 else \"value\"\n         raise InvalidHeader(\n+            f\"Invalid leading whitespace, reserved character(s), or return\"\n-            f\"Invalid leading whitespace, reserved character(s), or return \"\n             f\"character(s) in header {header_kind}: {header_part!r}\"\n         )\n "
+      }
+    ]
+  },
+  {
+    "sha": "6e5b15d5",
+    "message": "Fix linting issues",
+    "lines": 2,
+    "buggy_lines": [
+      "if not scheme.startswith('https') and username and password:"
+    ],
+    "files": [
+      {
+        "filename": "requests/sessions.py",
+        "patch": "@@ -326,7 +326,7 @@ def rebuild_proxies(self, prepared_request, proxies):\n \n         # urllib3 handles proxy authorization for us in the standard adapter.\n         # Avoid appending this to TLS tunneled requests where it may be leaked.\n+        if not scheme.startswith('https') and username and password:\n-        if not scheme.startswith(\"https\") and username and password:\n             headers[\"Proxy-Authorization\"] = _basic_auth_str(username, password)\n \n         return new_proxies"
+      }
+    ]
+  }
+]
