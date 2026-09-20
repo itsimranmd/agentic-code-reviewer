@@ -45,8 +45,8 @@ def already_reviewed(repo, pr, sha, token):
 
 def format_finding(finding):
     severity = SEVERITY_ICON.get(str(finding.get("severity", "low")).lower(), "Low")
-    return (f"{MARKER}\\n{severity} · {finding.get('pass', 'review')} · "
-            f"confidence {float(finding.get('confidence', 0)):.2f}\\n\\n"
+    return (f"{MARKER}\n{severity} · {finding.get('pass', 'review')} · "
+            f"confidence {float(finding.get('confidence', 0)):.2f}\n\n"
             f"{finding['issue']}")
 
 
@@ -77,7 +77,7 @@ def post_summary(repo, pr, sha, findings, token, failed):
               "dropped automatically. 95% catch rate on 20 known defects, "
               "0 false findings per review.</sub>"]
     gh("POST", f"/repos/{repo}/issues/{pr}/comments", token,
-       json={"body": "\\n".join(lines)})
+       json={"body": "\n".join(lines)})
 
 
 def main():
