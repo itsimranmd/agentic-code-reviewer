@@ -30,6 +30,20 @@ class GitHubClient:
         response.raise_for_status()
         return response.json()
 
+    def search_code(self, repo, name):
+        """Search this repo for other files mentioning a function/class name.
+
+        This powers a "you might want to check here too" hint, not a bug
+        finding. GitHub's code search only covers the default branch and can
+        lag a few minutes behind a fresh push, and it's rate-limited - so
+        failures here are quiet, not fatal.
+        """
+        try:
+            result = self._get("/search/code", q=f"{name} repo:{repo}", per_page=10)
+            return result.get("items", [])
+        except Exception:
+            return []
+
     def list_commits(self, repo, per_page=60, page=1):
         return self._get(f"/repos/{repo}/commits", per_page=per_page, page=page)
 
