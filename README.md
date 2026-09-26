@@ -173,9 +173,25 @@ One thing worth being upfront about: the 95% number is a Python number, based on
 
 ---
 
+---
+
+## Part 5: pointing at other files that might be affected
+
+The reviewer only ever sees a diff — the lines that changed in one pull request. So there's a real gap: if this PR changes a function, and that same function is called somewhere else in the repo, or copied elsewhere, the reviewer has no way to know that other file exists.
+
+It can't actually check whether those other places are affected — that's a much bigger problem. But it can at least point them out, so a human knows to look.
+
+**How it works:** when a PR changes a function or class, the reviewer searches the rest of the repo for other files that mention that same name, and lists them in a separate section of its summary comment - clearly labelled as a pointer, not a finding. It never gets a confidence score, and it's never counted toward the 95% catch rate, because it isn't reviewing anything - it's just saying "you might want to check here too."
+
+**The first version of this used GitHub's own code search**, since that seemed like the obvious tool for searching a repo. Tested it on a real pull request, and it came back empty - found nothing, even for words that were definitely in the codebase. Turns out GitHub's search index doesn't reliably cover repos with little traffic, and can stay unindexed for a long time. Confirmed this directly by querying GitHub's search API by hand and getting the same empty result, twice, hours apart.
+
+**Fixed by searching the actual files instead of asking GitHub's index.** Since the reviewer already has the whole repo checked out to do its normal review, it can just look through those files directly - no waiting on an index, no extra API call, and it works the same whether the repo has ten commits or ten thousand.
+
+---
+
 ## What this can't do yet
 
-- **It only sees the lines that changed**, not the rest of the file or project. A bug that only shows up somewhere else - like code that calls a function whose behaviour just changed - won't be caught.
+- **It only sees the lines that changed**, not the rest of the file or project. It can now point at other files that mention a changed function (see Part 5), but it doesn't check those files - a bug that only shows up somewhere else still won't be caught, just flagged as worth a look.
 - **It's only been tested on one codebase.** 95% is a real number, but it's a number about one library. Whether it holds up elsewhere hasn't been checked.
 - **The test set is 20 bugs.** Enough to trust the rough number, not enough to treat it as exact.
 - **It costs a small amount per review** - cents, but on a public repo, anyone opening a pull request can trigger that spend.
