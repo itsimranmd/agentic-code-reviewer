@@ -10,7 +10,8 @@ import sys
 import requests
 
 from reviewer import Reviewer
-from github_client import LANGUAGE_EXTENSIONS
+from github_client import LANGUAGE_EXTENSIONS, GitHubClient
+from caller_search import find_related_files, format_related_files_note
 
 API = "https://api.github.com"
 MARKER = "<!-- agentic-code-reviewer -->"
@@ -65,7 +66,7 @@ def post_line_comment(repo, pr, sha, finding, token):
     })
 
 
-def post_summary(repo, pr, sha, findings, token, failed):
+def post_summary(repo, pr, sha, findings, token, failed, related_note=""):
     if findings:
         lines = [f"{MARKER}", f"### Automated review · `{sha[:8]}`", ""]
         for f in failed:
@@ -75,6 +76,8 @@ def post_summary(repo, pr, sha, findings, token, failed):
     else:
         lines = [f"{MARKER}", f"### Automated review · `{sha[:8]}`", "",
                  "No issues found."]
+    if related_note:
+        lines.append(related_note)
     lines += ["", "---",
               f"<sub>Reviews added lines only, at confidence ≥ {MIN_CONFIDENCE}. "
               "Every finding quotes the code it refers to; unverifiable claims are "
@@ -111,6 +114,13 @@ def main():
 
     reviewer = Reviewer(min_confidence=MIN_CONFIDENCE)
     findings, rejected = reviewer.review(commit)
+
+    # Point at other files mentioning a changed function/class - the reviewer
+    # only ever sees this diff, so it can't know what else calls this code.
+    gh_client = GitHubClient(token)
+    related = find_related_files(commit, repo, gh_client.search_code)
+    related_note = format_related_files_note(related)
+    print(f"{len(related)} related file group(s) found")
     print(f"{len(findings)} finding(s); filtered "
           f"{rejected['evidence']} unverifiable, {rejected['confidence']} low-confidence")
     print(f"spend ${reviewer.spend['usd']:.4f}")
@@ -123,7 +133,7 @@ def main():
             print(f"line comment failed ({e}), falling back to summary")
             failed.append(finding)
 
-    post_summary(repo, pr, sha, findings, token, failed)
+    post_summary(repo, pr, sha, findings, token, failed, related_note)
 
 
 if __name__ == "__main__":
