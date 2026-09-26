@@ -1,4 +1,4 @@
-# 🤖 Agentic Code Reviewer
+# Agentic Code Reviewer
 
 **An AI that reviews pull requests - built to highlight only what matters & cut down bot noise**
 
@@ -93,7 +93,7 @@ Staying silent on a whitespace fix and a version bump is the right call. But zer
 
 ---
 
-## Part 3: proving the silence is real, not broken
+## Part 3: 
 
 **The idea: use history that's already labelled.** Every time someone fixes a bug in a real project, that commit is proof of exactly what was wrong and where. Take the code from just before the fix, and the bug is right there.
 
@@ -139,7 +139,7 @@ It stays flat all the way up to 0.7, then drops off a cliff. So 0.7 is the right
 
 ## Part 4: live on a real pull request
 
-This now runs as a GitHub Action - it comments on real pull requests automatically. No server, nothing to host, GitHub just runs it.
+This now runs as a GitHub Action - it comments on real pull requests automatically.
 
 A few choices worth explaining, since they matter once something runs unattended on real code:
 
