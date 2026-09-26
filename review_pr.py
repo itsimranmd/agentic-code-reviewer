@@ -10,7 +10,7 @@ import sys
 import requests
 
 from reviewer import Reviewer
-from github_client import LANGUAGE_EXTENSIONS, GitHubClient
+from github_client import LANGUAGE_EXTENSIONS
 from caller_search import find_related_files, format_related_files_note
 
 API = "https://api.github.com"
@@ -117,8 +117,7 @@ def main():
 
     # Point at other files mentioning a changed function/class - the reviewer
     # only ever sees this diff, so it can't know what else calls this code.
-    gh_client = GitHubClient(token)
-    related = find_related_files(commit, repo, gh_client.search_code)
+    related = find_related_files(commit, repo_root=os.getcwd())
     related_note = format_related_files_note(related)
     print(f"{len(related)} related file group(s) found")
     print(f"{len(findings)} finding(s); filtered "
