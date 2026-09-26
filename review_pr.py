@@ -10,10 +10,14 @@ import sys
 import requests
 
 from reviewer import Reviewer
+from github_client import LANGUAGE_EXTENSIONS
 
 API = "https://api.github.com"
 MARKER = "<!-- agentic-code-reviewer -->"
 MAX_FILES = int(os.getenv("MAX_FILES", "10"))
+# comma-separated, e.g. "python,javascript,typescript" - default keeps current behaviour
+LANGUAGES = os.getenv("LANGUAGES", "python").split(",")
+EXTENSIONS = tuple(ext for lang in LANGUAGES for ext in LANGUAGE_EXTENSIONS.get(lang.strip(), ()))
 MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "0.7"))
 
 SEVERITY_ICON = {"high": "**High**", "medium": "**Medium**", "low": "Low"}
@@ -95,7 +99,7 @@ def main():
 
     files = gh("GET", f"/repos/{repo}/pulls/{pr}/files", token, params={"per_page": 100})
     python_files = [f for f in files
-                    if f["filename"].endswith(".py") and f.get("patch")][:MAX_FILES]
+                    if f["filename"].endswith(EXTENSIONS) and f.get("patch")][:MAX_FILES]
 
     if not python_files:
         print("no Python changes")
