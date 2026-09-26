@@ -13,13 +13,13 @@ This version:     0 comments on the same 5 commits
 
 ## The problem
 
-Ask any AI to "review this code and point out issues" and it will always find something — that's just what happens when you ask a language model to justify itself.
+Ask any AI to "review this code and point out issues" and it will always find something - that's just what happens when you ask a language model to justify itself.
 
 Here's what that actually looked like, from a one-line change in a real, popular Python library:
 
-> *1. Type Hinting and Protocol Usage — 2. Error Handling — 3. Testing — 4. Code Clarity — 5. Deprecation of `basestring` — 6. Imports — 7. Documentation — 8. Performance Considerations*
+> *1. Type Hinting and Protocol Usage - 2. Error Handling - 3. Testing - 4. Code Clarity - 5. Deprecation of `basestring` - 6. Imports - 7. Documentation - 8. Performance Considerations*
 
-Twelve comments. On one line. Two of them were flat-out wrong — it claimed a valid, modern Python feature "wasn't standard," and it flagged a maintainer's email address as something worth double-checking. A developer sees that once and turns the bot off for good.
+Twelve comments. On one line. Two of them were flat-out wrong - it claimed a valid, modern Python feature "wasn't standard," and it flagged a maintainer's email address as something worth double-checking. A developer sees that once and turns the bot off for good.
 
 **So the real project here wasn't "can AI find bugs." It was: can I make it disciplined enough that people actually keep reading what it says.**
 
@@ -39,7 +39,7 @@ Twelve comments. On one line. Two of them were flat-out wrong — it claimed a v
    |             |      |          instead of one vague one
    +------+------+------+
           v
-   Every claim must quote the actual code — unquotable
+   Every claim must quote the actual code - unquotable
    claims get thrown out automatically
           v
    Only findings it's fairly confident about get through
@@ -47,13 +47,13 @@ Twelve comments. On one line. Two of them were flat-out wrong — it claimed a v
    Comments posted on the exact line in the PR
 ```
 
-Splitting it into three narrow checks instead of one vague prompt matters because one prompt trying to do four jobs does all of them badly. Each check also gets told, explicitly, what *not* to bother reporting — and that part turned out to matter more than anything else.
+Splitting it into three narrow checks instead of one vague prompt matters because one prompt trying to do four jobs does all of them badly. Each check also gets told, explicitly, what *not* to bother reporting - and that part turned out to matter more than anything else.
 
 ---
 
 ## Part 1: the naive version, and why it didn't work
 
-First attempt: one prompt, one pass, tested on five real code changes from `requests` — the most-downloaded Python library there is. Real code, written by good engineers, not toy examples.
+First attempt: one prompt, one pass, tested on five real code changes from `requests` - the most-downloaded Python library there is. Real code, written by good engineers, not toy examples.
 
 ```
 change            lines changed   comments it made
@@ -64,7 +64,7 @@ cd90742e                 2               5
 6e83187b                 4              10
 ```
 
-**The smaller the change, the more it complained.** A one-line type annotation got 12 comments. A pure formatting fix — fixing indentation in a comment — got 5, including unsolicited advice about how to write better commit messages. The model doesn't scale its output to how much there actually is to say; it was asked for issues, so it invents some.
+**The smaller the change, the more it complained.** A one-line type annotation got 12 comments. A pure formatting fix - fixing indentation in a comment - got 5, including unsolicited advice about how to write better commit messages. The model doesn't scale its output to how much there actually is to say; it was asked for issues, so it invents some.
 
 I went through all 64 comments by hand. Roughly 3% were things a developer would genuinely act on. The rest was vague hedging ("maybe add more tests," "consider error handling") or just wrong.
 
@@ -83,13 +83,13 @@ A model can say anything with confidence.
 It can't fake a quote that has to exist in the code.
 ```
 
-This directly fixes the earlier problem — the wrong claim about a Python feature. If the model tries to invent something, there's simply nothing to quote, so it gets dropped before anyone sees it. And it costs nothing to check.
+This directly fixes the earlier problem - the wrong claim about a Python feature. If the model tries to invent something, there's simply nothing to quote, so it gets dropped before anyone sees it. And it costs nothing to check.
 
-**4. A confidence cutoff.** A diff only shows what changed, not the rest of the file — so there's plenty the reviewer genuinely can't know, like whether a test already covers this. So it's told exactly that, and anything it's not fairly confident about below a 0.7 threshold gets dropped rather than guessed at.
+**4. A confidence cutoff.** A diff only shows what changed, not the rest of the file - so there's plenty the reviewer genuinely can't know, like whether a test already covers this. So it's told exactly that, and anything it's not fairly confident about below a 0.7 threshold gets dropped rather than guessed at.
 
 **Result, on the same five commits: 65 comments down to 0.**
 
-Staying silent on a whitespace fix and a version bump is the right call. But zero comments also looks exactly the same whether the reviewer got genuinely better, or just stopped working. There's no way to tell the difference from this alone — which is the whole reason for what came next.
+Staying silent on a whitespace fix and a version bump is the right call. But zero comments also looks exactly the same whether the reviewer got genuinely better, or just stopped working. There's no way to tell the difference from this alone - which is the whole reason for what came next.
 
 ---
 
@@ -103,15 +103,15 @@ the actual fix:                    what gets reviewed instead:
   + fixed line                       - fixed line
 ```
 
-Flip the added and removed lines, and now there's a diff that *introduces* a real bug that once fooled a real reviewer — along with an answer key for exactly where it is.
+Flip the added and removed lines, and now there's a diff that *introduces* a real bug that once fooled a real reviewer - along with an answer key for exactly where it is.
 
-### The test set needed cleaning up — twice
+### The test set needed cleaning up - twice
 
 **First attempt:** searched commit messages for words like "fix" and "bug." Found 35 matches. Catch rate: **66%.**
 
-**Problem: 15 of those weren't actual code bugs.** "Fix remaining typos," "Fix a broken link," "Fix cosmetic regex formatting" — the word "fix" doesn't always mean a bug got fixed. So instead of trusting the commit message, the filter now checks what the change actually touches — code, not docs, not config, not a revert.
+**Problem: 15 of those weren't actual code bugs.** "Fix remaining typos," "Fix a broken link," "Fix cosmetic regex formatting" - the word "fix" doesn't always mean a bug got fixed. So instead of trusting the commit message, the filter now checks what the change actually touches - code, not docs, not config, not a revert.
 
-**After cleaning it up: 20 real bugs, 95% caught, zero false alarms.** The one it missed turned out to still be a documentation fix that slipped through — so the real number is arguably closer to a clean sweep.
+**After cleaning it up: 20 real bugs, 95% caught, zero false alarms.** The one it missed turned out to still be a documentation fix that slipped through - so the real number is arguably closer to a clean sweep.
 
 **Both numbers are reported here on purpose, not just the better-looking one:**
 
@@ -123,7 +123,7 @@ False alarms, at every setting tested:       0
 
 ### Choosing where to set the confidence bar
 
-Confidence is a dial, not a fixed setting. Rather than re-running everything at each level, findings were collected once with no filter at all, then filtered afterward at different levels — same result, far cheaper:
+Confidence is a dial, not a fixed setting. Rather than re-running everything at each level, findings were collected once with no filter at all, then filtered afterward at different levels - same result, far cheaper:
 
 ```
 confidence level     bugs caught     false alarms
@@ -133,19 +133,19 @@ confidence level     bugs caught     false alarms
       0.8                10%              0
 ```
 
-It stays flat all the way up to 0.7, then drops off a cliff. So 0.7 is the right setting — same number of bugs caught as no filter at all, but with the most safety margin against future false alarms.
+It stays flat all the way up to 0.7, then drops off a cliff. So 0.7 is the right setting - same number of bugs caught as no filter at all, but with the most safety margin against future false alarms.
 
 ---
 
 ## Part 4: live on a real pull request
 
-This now runs as a GitHub Action — it comments on real pull requests automatically. No server, nothing to host, GitHub just runs it.
+This now runs as a GitHub Action - it comments on real pull requests automatically. No server, nothing to host, GitHub just runs it.
 
 A few choices worth explaining, since they matter once something runs unattended on real code:
 
 - **If it crashes, it fails quietly and gets out of the way.** It should never be the reason a pull request can't be merged just because an API call timed out.
 - **It won't repeat itself.** If the same commit gets reviewed twice, it doesn't post the same comment again.
-- **It never runs the code it's reviewing.** For pull requests from outside contributors, it only reads the diff through GitHub's API — it doesn't check out and execute anything, for obvious safety reasons.
+- **It never runs the code it's reviewing.** For pull requests from outside contributors, it only reads the diff through GitHub's API - it doesn't check out and execute anything, for obvious safety reasons.
 - **There's a cap on how many files it reviews per PR**, so one giant change can't quietly rack up a big bill.
 
 ### Testing it for real
@@ -165,20 +165,20 @@ A pull request was opened with four bugs planted on purpose:
 
 ## Getting it working for other languages
 
-This was built for Python first. Turns out most of it doesn't actually care what language it's looking at — reading a diff works the same whether it's Python, JavaScript, or anything else.
+This was built for Python first. Turns out most of it doesn't actually care what language it's looking at - reading a diff works the same whether it's Python, JavaScript, or anything else.
 
 So adding JavaScript and TypeScript support only took two small changes: telling it which file types to look at, and adding a short note to each check about mistakes common in those languages (like forgetting to handle a failed async call).
 
-One thing worth being upfront about: the 95% number is a Python number, based on real Python bugs. If this gets extended to another language, that number needs to be measured again for that language — it doesn't automatically carry over.
+One thing worth being upfront about: the 95% number is a Python number, based on real Python bugs. If this gets extended to another language, that number needs to be measured again for that language - it doesn't automatically carry over.
 
 ---
 
 ## What this can't do yet
 
-- **It only sees the lines that changed**, not the rest of the file or project. A bug that only shows up somewhere else — like code that calls a function whose behaviour just changed — won't be caught.
+- **It only sees the lines that changed**, not the rest of the file or project. A bug that only shows up somewhere else - like code that calls a function whose behaviour just changed - won't be caught.
 - **It's only been tested on one codebase.** 95% is a real number, but it's a number about one library. Whether it holds up elsewhere hasn't been checked.
 - **The test set is 20 bugs.** Enough to trust the rough number, not enough to treat it as exact.
-- **It costs a small amount per review** — cents, but on a public repo, anyone opening a pull request can trigger that spend.
+- **It costs a small amount per review** - cents, but on a public repo, anyone opening a pull request can trigger that spend.
 
 ## What's next
 
@@ -208,13 +208,13 @@ results/              the actual test data and numbers, not just claims about th
 ## Questions someone might ask
 
 **Why not just use a smarter model?**
-Probably wouldn't help much by itself. What actually fixed the noise problem was forcing every claim to quote real code and requiring a confidence score — not raw model intelligence. A smarter model still needs somewhere to put its uncertainty.
+Probably wouldn't help much by itself. What actually fixed the noise problem was forcing every claim to quote real code and requiring a confidence score - not raw model intelligence. A smarter model still needs somewhere to put its uncertainty.
 
 **Isn't 95% a bit high to believe?**
-Fair reaction — it was the same one here. It only looks that clean after going back and fixing mistakes in how the test set was built, twice. Both the messier 66% number and the cleaned-up 95% number are kept in this README on purpose, so nothing's quietly hidden.
+Fair reaction - it was the same one here. It only looks that clean after going back and fixing mistakes in how the test set was built, twice. Both the messier 66% number and the cleaned-up 95% number are kept in this README on purpose, so nothing's quietly hidden.
 
 **Could a team actually use this?**
-As a second pair of eyes next to a human reviewer, worth trying. As a replacement for one, not yet — it genuinely can't see bugs that span multiple files, and it's only been proven on one codebase so far.
+As a second pair of eyes next to a human reviewer, worth trying. As a replacement for one, not yet - it genuinely can't see bugs that span multiple files, and it's only been proven on one codebase so far.
 
 ---
 
@@ -222,4 +222,4 @@ As a second pair of eyes next to a human reviewer, worth trying. As a replacemen
 
 Claude wrote almost all of the code here. What came from this end was the direction: deciding how to actually test whether any of it worked, catching that the first test set was quietly contaminated by misleading commit messages, pushing to make the test set bigger when an early result looked suspiciously good, and asking to extend it to other languages once it became clear the code was more reusable than expected.
 
-Every number in this README comes from a results file that's actually saved in this repo — not just typed here.
+Every number in this README comes from a results file that's actually saved in this repo - not just typed here.
