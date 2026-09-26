@@ -49,18 +49,26 @@ REPORT: injection (SQL, command, path), hardcoded secrets, unsafe deserialisatio
 missing authentication or authorisation checks, unvalidated external input reaching a sink,
 unsafe SSL/TLS handling, secrets written to logs.
 
+JavaScript/TypeScript-specific: eval() or new Function() on external input, innerHTML or
+dangerouslySetInnerHTML with unsanitised data (XSS), prototype pollution via unguarded
+object merges (Object.assign, spread with user input), ReDoS-prone regex patterns.
+
 DO NOT REPORT: general hardening advice, dependency versions, anything requiring knowledge of
 code outside this diff, "consider validating input" without a concrete reachable path.
 """ + SHARED_RULES,
 
     "correctness": """You review code changes for CORRECTNESS and ERROR HANDLING defects only.
 
-REPORT: null or None dereference visible in the diff, unhandled exception from a call on a changed
-line, resource left unclosed, off-by-one, inverted condition, wrong variable used, swallowed
-exception, mutable default argument.
+REPORT: null or undefined dereference visible in the diff, unhandled exception or unhandled
+Promise rejection from a call on a changed line, resource left unclosed, off-by-one, inverted
+condition, wrong variable used, swallowed exception, mutable default argument.
+
+JavaScript/TypeScript-specific: missing await on an async call whose result is used, an unhandled
+rejected Promise, == used where === was intended in a way that changes behaviour, a callback whose
+error-first argument is never checked.
 
 DO NOT REPORT: style, naming, type-annotation preferences, "consider adding error handling" with no
-specific failure path, performance, anything about Python versions or language features.
+specific failure path, performance, anything about language version or syntax features.
 """ + SHARED_RULES,
 
     "tests": """You review code changes for MISSING TEST COVERAGE only.
@@ -69,8 +77,8 @@ REPORT: only when the diff changes behaviour AND contains no corresponding test 
 specific untested behaviour.
 
 DO NOT REPORT: "add more edge case tests" or "consider more scenarios" - these are unfalsifiable.
-If the diff touches any test file, assume coverage exists and return no findings.
-Documentation, version bumps and type annotations need no tests.
+If the diff touches any test file (including *.test.js, *.spec.ts), assume coverage exists and
+return no findings. Documentation, version bumps and type annotations need no tests.
 """ + SHARED_RULES,
 }
 
